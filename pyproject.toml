@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pixeltoolkit"
+version = "1.0.0"
+description = "Image-to-pixel-art conversion, shared palettes, batch processing and visual review"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.11"
+dependencies = ["numpy>=2,<3", "Pillow>=11,<13"]
+
+[project.urls]
+Homepage = "https://github.com/iceriny/PixelToolkit"
+Repository = "https://github.com/iceriny/PixelToolkit"
+Issues = "https://github.com/iceriny/PixelToolkit/issues"
+
+[project.scripts]
+pixeltoolkit = "pixeltoolkit.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["pixeltoolkit*"]
+
+[tool.setuptools.package-data]
+pixeltoolkit = ["web.html"]

@@ -1,0 +1,85 @@
+name: Test and release
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  PYTHONUTF8: "1"
+
+jobs:
+  test:
+    name: Test ${{ matrix.os }} / Python ${{ matrix.python }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python: ["3.11", "3.13"]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10
+        with:
+          python-version: ${{ matrix.python }}
+      - run: uv sync --locked
+      - run: uv run --locked python -m unittest discover -s tests -v
+      - run: uv run --locked pixeltoolkit --help
+
+  windows:
+    name: Build Windows portable app
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: test
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10
+        with:
+          python-version: "3.12"
+      - run: uv sync --locked
+      - run: uv run --locked python tools/release.py check --tag ${{ github.ref_name }}
+      - name: Build executable
+        run: uv run --locked --with "pyinstaller>=6,<7" pyinstaller --clean --noconfirm --onefile --name PixelToolkit --collect-data pixeltoolkit tools/portable.py
+      - run: dist/PixelToolkit.exe --help
+      - run: uv run --locked python tools/release.py portable
+      - uses: actions/upload-artifact@v7
+        with:
+          name: windows-portable
+          path: dist/*-windows-x64.zip
+          if-no-files-found: error
+
+  release:
+    name: Publish GitHub release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [test, windows]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10
+        with:
+          python-version: "3.12"
+      - run: uv sync --locked
+      - run: uv run --locked python tools/release.py check --tag ${{ github.ref_name }}
+      - run: uv build
+      - uses: actions/download-artifact@v8
+        with:
+          name: windows-portable
+          path: dist
+      - run: uv run --locked python tools/release.py checksums
+      - name: Publish release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release upload "$RELEASE_TAG" dist/*.whl dist/*.tar.gz dist/*-windows-x64.zip dist/SHA256SUMS.txt --clobber
+          else
+            gh release create "$RELEASE_TAG" dist/*.whl dist/*.tar.gz dist/*-windows-x64.zip dist/SHA256SUMS.txt --verify-tag --title "PixelToolkit $RELEASE_TAG" --notes-file RELEASE_NOTES.md
+          fi

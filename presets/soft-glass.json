@@ -1,0 +1,14 @@
+{
+  "size": [32, 32],
+  "colors": 24,
+  "padding": 2,
+  "tile": false,
+  "trim": true,
+  "alpha": "keep",
+  "threshold": 0.48,
+  "detail": 0.55,
+  "cleanup": 0.02,
+  "saturation": 0.9,
+  "backdrop": null,
+  "tolerance": 24
+}

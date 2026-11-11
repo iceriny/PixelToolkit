@@ -1,0 +1,6 @@
+include README.md LICENSE uv.lock
+include *.md
+include *.cmd
+recursive-include presets *.json
+recursive-include tests *.py
+recursive-include tools *.py

@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PixelToolkit · 像素工坊</title>
+<style>
+:root{color-scheme:dark;--bg:#15191e;--panel:#20262e;--edge:#36414d;--text:#e2e9ed;--muted:#99a8b6;--accent:#80ceb4}
+*{box-sizing:border-box}body{margin:0;font:14px/1.6 system-ui,"Microsoft YaHei",sans-serif;background:var(--bg);color:var(--text)}
+header{padding:24px 32px;border-bottom:1px solid var(--edge);display:flex;align-items:center;gap:18px}h1{margin:0;font-size:23px;letter-spacing:.02em}header span{color:var(--muted)}
+main{display:grid;grid-template-columns:300px 1fr;gap:20px;padding:22px;max-width:1600px;margin:auto}aside,.view{background:var(--panel);border:1px solid var(--edge);border-radius:12px;padding:20px}
+label{display:block;color:var(--muted);margin:13px 0 5px}input,select,button,textarea{font:inherit}select,input[type=number],input[type=text],textarea{width:100%;background:#151b21;border:1px solid var(--edge);color:var(--text);padding:8px 10px;border-radius:6px}input[type=range]{width:100%;accent-color:var(--accent)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}.check{display:flex;gap:8px;align-items:center}.check label{margin:5px 0}.check input{accent-color:var(--accent)}
+button{border:1px solid var(--edge);background:#303c47;color:var(--text);padding:8px 12px;border-radius:7px;cursor:pointer}button:hover{border-color:var(--accent)}button.primary{background:var(--accent);color:#152d26;font-weight:650}button:disabled{opacity:.4;cursor:default}
+.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}.hint{font-size:12px;color:var(--muted)}.upload{border:1px dashed #668b83;padding:17px;border-radius:8px;cursor:pointer;display:block;margin:0;color:var(--text)}.upload input{width:100%;margin-top:12px}
+.view{min-width:0}.viewer-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:14px;margin:15px 0}.viewer-toolbar label{margin:0}.viewer-toolbar select{width:auto}.preview-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.preview-grid h2{font-size:14px;font-weight:500;margin:4px 0 10px;color:var(--muted)}
+.well{height:420px;background:#303941;overflow:auto;display:flex;align-items:center;justify-content:center;border-radius:8px;border:1px solid var(--edge);padding:14px}.well.checker{background-color:#494b50;background-image:linear-gradient(45deg,#5a5d62 25%,transparent 25%),linear-gradient(-45deg,#5a5d62 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#5a5d62 75%),linear-gradient(-45deg,transparent 75%,#5a5d62 75%);background-size:16px 16px;background-position:0 0,0 8px,8px -8px,-8px 0}
+.well.light{background:#e7ddd0}.well.dark{background:#1b2027}.well img{object-fit:contain;max-width:100%;max-height:100%}#pixel{image-rendering:pixelated;max-width:none;max-height:none;flex:none}#native{image-rendering:pixelated;border:1px solid var(--edge)}
+#status{white-space:pre-wrap;margin-top:16px;min-height:28px}#status.error{color:#ffb1a9}textarea{font-size:12px;resize:vertical;min-height:60px}summary{cursor:pointer;margin-top:16px;color:var(--muted)}#files{width:100%;margin-top:12px}footer{color:var(--muted);padding:5px 22px 24px;text-align:center}
+@media(max-width:900px){main{grid-template-columns:1fr}header{padding:18px}.preview-grid{grid-template-columns:1fr}.well{height:300px}aside{display:grid;gap:0 18px;grid-template-columns:1fr 1fr}aside>.full,aside>details{grid-column:1/-1}}
+</style>
+<header><h1>像素工坊 <small style="font-size:13px;color:var(--accent)">PixelToolkit</small></h1><span>高清图 → 像素底稿</span></header>
+<main>
+<aside id="controls">
+<div class="full"><label class="upload">选择图片，可一次选多张<input id="upload" type="file" accept="image/png,image/jpeg,image/webp,image/bmp,image/tiff" multiple></label><select id="files" aria-label="预览文件"><option>尚未选择图片</option></select></div>
+<div><label for="preset">用途预设</label><select id="preset"><option value="icon">小图标 · 16 × 16</option><option value="sprite" selected>精灵／道具 · 32 × 32</option><option value="texture">材质 · 32 × 32</option><option value="illustration">插图 · 160 × 96</option><option value="ui">界面组件 · 64 × 64</option></select></div>
+<div class="two"><div><label for="width">宽度</label><input id="width" type="number" min="1" max="512" value="32"></div><div><label for="height">高度</label><input id="height" type="number" min="1" max="512" value="32"></div></div>
+<div class="two"><div><label for="colors">颜色上限</label><input id="colors" type="number" min="2" max="256" value="24"></div><div><label for="padding">留边</label><input id="padding" type="number" min="0" value="2"></div></div>
+<div><label for="alpha">透明处理</label><select id="alpha"><option value="cutout">二值轮廓</option><option value="keep">保留半透明</option></select></div>
+<div class="full"><div class="check"><input id="trim" type="checkbox" checked><label for="trim">裁去透明外边</label></div><div class="check"><input id="tile" type="checkbox"><label for="tile">铺满目标画布</label></div></div>
+<details><summary>细节与去底</summary>
+<label for="detail">边缘与局部细节</label><input id="detail" type="number" min="0" max="2" step=".05" value=".55">
+<label for="cleanup">孤立近色合并</label><input id="cleanup" type="number" min="0" max="1" step=".01" value=".045">
+<label for="saturation">饱和度</label><input id="saturation" type="number" min="0" max="2" step=".05" value="1">
+<label for="threshold">轮廓透明阈值</label><input id="threshold" type="number" min=".01" max="1" step=".01" value=".48">
+<label for="backdrop">连通去底色</label><input id="backdrop" type="text" placeholder="留空关闭，例如 FFFFFF">
+<label for="tolerance">去底容差</label><input id="tolerance" type="number" min="0" max="255" value="24">
+</details>
+<details><summary>套装色板与参数文件</summary>
+<label for="palette">固定色板 JSON</label><textarea id="palette" placeholder='{"colors":["#302A32","#A98B62","#EAD9B5"]}'></textarea>
+<div class="actions"><button id="extract">从所选图片提取</button><button id="savePalette">保存色板</button></div>
+<div class="check"><input id="shared" type="checkbox" checked><label for="shared">批量使用统一自动色板</label></div>
+<label for="importConfig">读取参数 JSON</label><input id="importConfig" type="file" accept=".json">
+<div class="actions"><button id="saveConfig">保存当前参数</button></div>
+</details>
+<div class="actions full"><button id="convert" class="primary">转换当前图片</button><button id="batch">批量导出 ZIP</button></div>
+<p class="hint full">批量包包含原尺寸 PNG、深浅底预览与参数。选用统一色板可保持同组颜色一致。</p>
+</aside>
+<section class="view">
+<div class="viewer-toolbar"><label for="background">底色</label><select id="background"><option value="checker">棋盘格</option><option value="dark">深色</option><option value="light">浅色</option></select><label for="zoom">像素放大</label><select id="zoom"><option>1</option><option>2</option><option selected>8</option><option>12</option><option>16</option></select></div>
+<div class="preview-grid"><div><h2>原图</h2><div class="well checker"><img id="source" alt="原图预览"></div></div><div><h2 id="outputTitle">像素结果</h2><div class="well checker"><img id="pixel" alt="转换结果"></div></div></div>
+<div class="actions"><button id="download" disabled>下载原尺寸 PNG</button><span class="hint">实际尺寸</span><canvas id="native" width="1" height="1"></canvas></div>
+<div id="status" role="status">选择图片后可调整参数并转换。文件仅在这台电脑处理。</div>
+</section>
+</main>
+<footer>缩小到低分辨率会舍弃细节，导出后可继续在像素编辑器中修整。</footer>
+<script>
+const token="__TOKEN__", $=id=>document.getElementById(id);
+const defaults={
+ icon:{size:[16,16],colors:14,padding:1,alpha:"cutout",tile:false,trim:true},
+ sprite:{size:[32,32],colors:24,padding:2,alpha:"cutout",tile:false,trim:true},
+ texture:{size:[32,32],colors:16,padding:0,alpha:"keep",tile:true,trim:false},
+ illustration:{size:[160,96],colors:32,padding:0,alpha:"keep",tile:false,trim:false},
+ ui:{size:[64,64],colors:24,padding:0,alpha:"keep",tile:false,trim:false}
+};
+let inputs=[], converted=null, busy=false;
+const numeric=["colors","padding","threshold","detail","cleanup","saturation","tolerance"];
+function status(text,error=false){$("status").textContent=text;$("status").className=error?"error":""}
+function invalidate(){converted=null;$("download").disabled=true;status("参数或输入已改变，请重新转换。")}
+function settings(){
+ const data={size:[Number($("width").value),Number($("height").value)],alpha:$("alpha").value,tile:$("tile").checked,trim:$("trim").checked};
+ for(const key of numeric)data[key]=Number($(key).value);
+ if($("backdrop").value.trim())data.backdrop=$("backdrop").value.trim();
+ return data;
+}
+function apply(data){
+ if(data.size){$("width").value=data.size[0];$("height").value=data.size[1]}
+ for(const key of numeric)if(data[key]!==undefined)$(key).value=data[key];
+ for(const key of ["tile","trim"])if(data[key]!==undefined)$(key).checked=data[key];
+ if(data.alpha)$("alpha").value=data.alpha;
+ if(data.backdrop!==undefined)$("backdrop").value=Array.isArray(data.backdrop)?data.backdrop.map(v=>v.toString(16).padStart(2,"0")).join(""):data.backdrop||"";
+ invalidate();
+}
+function download(blob,name){
+ const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),2000);
+}
+function dataFile(file){return new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve({name:file.name,data:reader.result.split(",")[1]});reader.onerror=reject;reader.readAsDataURL(file)})}
+function sourcePreview(){
+ invalidate();
+ if(!inputs.length)return;
+ const file=inputs[Number($("files").value)];$("source").src="data:image/png;base64,"+file.data;
+}
+async function run(operation){
+ if(busy)return;
+ if(!inputs.length){status("请先选择图片。",true);return}
+ busy=true;document.querySelectorAll("aside input,aside select,aside textarea,button").forEach(b=>b.disabled=true);status("正在处理……");
+ try{
+  const files=operation==="convert"?[inputs[Number($("files").value)]]:inputs;
+  const payload={files,preset:$("preset").value,settings:settings(),palette:$("palette").value.trim(),shared:operation==="batch"&&$("shared").checked};
+  const response=await fetch("/"+operation,{method:"POST",headers:{"Content-Type":"application/json","X-PixelToolkit-Token":token},body:JSON.stringify(payload)});
+  if(!response.ok)throw new Error((await response.json()).error||"处理失败");
+  if(operation==="batch"){
+   download(await response.blob(),"pixel-assets.zip");status("已导出 "+inputs.length+" 张图片及预览。");
+  }else if(operation==="palette"){
+   $("palette").value=JSON.stringify(await response.json(),null,2);invalidate();status("已提取统一色板，可重新转换。");
+  }else{
+   const result=await response.json();converted=result.image;
+   $("pixel").onload=()=>{
+    const img=$("pixel"),scale=Number($("zoom").value);img.style.width=img.naturalWidth*scale+"px";img.style.height=img.naturalHeight*scale+"px";
+    const c=$("native");c.width=img.naturalWidth;c.height=img.naturalHeight;c.getContext("2d").drawImage(img,0,0);
+   };
+   $("pixel").src="data:image/png;base64,"+converted;
+   $("outputTitle").textContent="像素结果 · "+result.size.join(" × ");status("已转换。下载的 PNG 保持目标像素尺寸。");
+  }
+ }catch(error){status(error.message,true)}
+ finally{busy=false;document.querySelectorAll("aside input,aside select,aside textarea,button").forEach(b=>b.disabled=false);$("download").disabled=!converted}
+}
+$("upload").onchange=async e=>{
+ try{
+  const files=[...e.target.files];if(files.length>100||files.reduce((a,b)=>a+b.size,0)>46*1024*1024)throw new Error("最多 100 张图片，合计不超过 46 MB。");
+  inputs=await Promise.all(files.map(dataFile));$("files").replaceChildren();
+  inputs.forEach((file,i)=>{const option=new Option(file.name,String(i));$("files").add(option)});sourcePreview();
+ }catch(error){status(error.message,true)}
+};
+$("files").onchange=sourcePreview;
+$("preset").onchange=()=>apply(defaults[$("preset").value]);
+for(const id of [...numeric,"width","height","alpha","tile","trim","backdrop","palette","shared"])$(id).addEventListener("change",invalidate);
+$("background").onchange=()=>document.querySelectorAll(".well").forEach(el=>el.className="well "+$("background").value);
+$("zoom").onchange=()=>{const img=$("pixel");img.style.width=img.naturalWidth*Number($("zoom").value)+"px";img.style.height=img.naturalHeight*Number($("zoom").value)+"px"};
+$("convert").onclick=()=>run("convert");$("batch").onclick=()=>run("batch");$("extract").onclick=()=>run("palette");
+$("download").onclick=()=>{if(converted){const bytes=Uint8Array.from(atob(converted),c=>c.charCodeAt(0));const stem=inputs[Number($("files").value)].name.replace(/\.[^.]+$/,"");download(new Blob([bytes],{type:"image/png"}),stem+"-pixel.png")}};
+$("saveConfig").onclick=()=>download(new Blob([JSON.stringify(settings(),null,2)],{type:"application/json"}),"pixel-settings.json");
+$("savePalette").onclick=()=>{try{const p=JSON.parse($("palette").value);download(new Blob([JSON.stringify(p,null,2)],{type:"application/json"}),"palette.json")}catch(e){status("请先提取或粘贴有效色板。",true)}};
+$("importConfig").onchange=async e=>{try{apply(JSON.parse(await e.target.files[0].text()));status("参数已读取，请重新转换。")}catch(error){status(error.message,true)}};
+</script>
+</html>
